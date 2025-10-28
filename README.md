@@ -5,7 +5,7 @@ Uses a modified bedrock API (https://github.com/BluCodeGH/bedrock) to support ch
 
 Exploration saves use LZ4 compression, requiring it as dependency.
 ```
-pip install lz4.block
+pip install lz4
 ```
 Usage
 ```

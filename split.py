@@ -31,11 +31,11 @@ class Splitter:
                 chunk_y % 16 == 0 and 
                 verify_LZ4_magic_bytes == bytes.fromhex(self.LZ4_SIGNATURE)
             ):
-                segment_file_name = f"{segment_number:03d}_head_{self.heads_found:03d}.bin"
+                segment_file_name = f"{segment_number:05d}_head_{self.heads_found:03d}.bin"
                 self.heads_found += 1
             
             else:
-                segment_file_name = f"{segment_number:03d}_body_{self.bodies_found:03d}.bin"
+                segment_file_name = f"{segment_number:05d}_body_{self.bodies_found:03d}.bin"
                 self.bodies_found += 1
 
         with open(os.path.join(self.output_dir, segment_file_name), "wb") as out:

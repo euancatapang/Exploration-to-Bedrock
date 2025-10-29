@@ -1,0 +1,10 @@
+__pycache__/
+
+converted/
+files/
+
+split/
+reconstructed_compressed/
+decompressed_chunks/
+
+save*_converted*.mcworld

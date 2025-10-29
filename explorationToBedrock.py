@@ -24,21 +24,25 @@ def __prepare_template_world():
     os.remove(copied_world)
 
 def __zip_template_to_mcworld(template_dir: str, input_save_path: str):
+    # Ensure converted output folder exists
+    output_dir = os.path.join(os.path.dirname(__file__), "converted")
+    os.makedirs(output_dir, exist_ok=True)
+
     input_filename = os.path.basename(input_save_path)
     if not input_filename.lower().startswith("save") or not input_filename.lower().endswith(".dat"):
         raise ValueError(f"Input save file '{input_filename}' does not match expected format 'saveXX.dat'")
 
     save_number = input_filename[4:-4]  # e.g., '05'
-    
-    # Find a free converted number
+
+    # Find a free converted number (avoid overwriting)
     converted_index = 1
     while True:
-        output_mcworld = f"save{save_number}_converted{converted_index:02d}.mcworld"
+        output_mcworld = os.path.join(output_dir, f"save{save_number}_converted{converted_index:02d}.mcworld")
         if not os.path.exists(output_mcworld):
             break
         converted_index += 1
 
-    # Zip the template
+    # Zip the working template into the converted folder
     with zipfile.ZipFile(output_mcworld, 'w', zipfile.ZIP_DEFLATED) as zipf:
         for root, dirs, files in os.walk(template_dir):
             for file in files:

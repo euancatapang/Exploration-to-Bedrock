@@ -9,19 +9,17 @@ class Reconstructor:
     output_dir = "reconstructed_compressed"
     input_dir = "split"
 
-    heads_list = []
-
     # Get all chunk heads from directory
     def __list_heads(self):
-        self.heads_list = sorted(glob.glob(os.path.join(self.input_dir, "*_head_*.bin")))
-        if not self.heads_list:
+        heads_list = sorted(glob.glob(os.path.join(self.input_dir, "*_head_*.bin")))
+        if not heads_list:
             raise ValueError("No valid chunks found in world")
         
-        print(f"Found {len(self.heads_list)} chunks")
-        return self.heads_list
+        print(f"Found {len(heads_list)} chunks")
+        return heads_list
 
     # Rebuild fragmented compressed payloads
-    def __reconstruct_compressed_payload(self, head_path: str) -> tuple[bytearray, int, int, int]:
+    def __reconstruct_compressed_payload(self, head_path: str) -> tuple[bytearray, int, int]:
         with open(head_path, "rb") as f:
             head_data = bytearray(f.read())
 
@@ -46,20 +44,21 @@ class Reconstructor:
                 
                 chunk_data.extend(body_data[8:8 + min(remaining_size, 1016)])
 
-        return chunk_data, chunk_x, chunk_y, compressed_size
+        return chunk_data, chunk_x, chunk_y
 
     # Save chunk from concatenated segments in buffer
-    def __write_chunk(self, chunk_data: bytearray, chunk_x: int, chunk_y: int, compressed_size: int):
-        os.makedirs(self.output_dir, exist_ok=True)
-        filename = f"x{chunk_x:+04d}_y{chunk_y:+04d}_size{compressed_size:05d}.bin"
+    def __write_chunk(self, chunk_data: bytearray, chunk_x: int, chunk_y: int):
+        filename = f"{chunk_x:+04d}_{chunk_y:+04d}.bin"
 
         with open(os.path.join(self.output_dir, filename), "wb") as f:
             f.write(chunk_data)
 
     # Concatenate segments to each respective head
     def reconstruct_compressed_chunks(self):
-        self.__list_heads()
+        heads_list = self.__list_heads()
+        self.chunks_reconstructed = len(heads_list)
 
-        for head_path in self.heads_list:
-            chunk_data, chunk_x, chunk_y, compressed_size = self.__reconstruct_compressed_payload(head_path)
-            self.__write_chunk(chunk_data, chunk_x, chunk_y, compressed_size)
+        os.makedirs(self.output_dir, exist_ok=True)
+        for head_path in heads_list:
+            chunk_data, chunk_x, chunk_y = self.__reconstruct_compressed_payload(head_path)
+            self.__write_chunk(chunk_data, chunk_x, chunk_y)

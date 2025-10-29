@@ -4,7 +4,8 @@ import struct
 class Splitter:
 
     SEGMENT_SIZE = 1024
-    LZ4_SIGNATURE = "1F030100"
+    LZ4_SIGNATURE = ["1F030100", "1B070100"]
+    EXPLORATION_WORLD_SIGNATURE = "45585031"
     
     output_dir = "split"
 
@@ -29,7 +30,7 @@ class Splitter:
 
             if (chunk_x % 16 == 0 and 
                 chunk_y % 16 == 0 and 
-                verify_LZ4_magic_bytes == bytes.fromhex(self.LZ4_SIGNATURE)
+                any(verify_LZ4_magic_bytes == bytes.fromhex(sig) for sig in self.LZ4_SIGNATURE)
             ):
                 segment_file_name = f"{segment_number:05d}_head_{self.heads_found:03d}.bin"
                 self.heads_found += 1
@@ -40,19 +41,24 @@ class Splitter:
 
         with open(os.path.join(self.output_dir, segment_file_name), "wb") as out:
             out.write(current_segment_data)
-        
+    
+    def __verify_exploration_world(self, magic_bytes: bytes):
+        if magic_bytes != bytes.fromhex(self.EXPLORATION_WORLD_SIGNATURE):
+            raise ValueError("File is not a valid Exploration world")
+
     def split_world_file(self):
-        os.makedirs(self.output_dir, exist_ok=True)
         world_file_size = os.path.getsize(self.input_world)
-        
-        if world_file_size % 1024 != 0: raise ValueError(f"World size of {self.input_world} is not divisible by 1024 bytes")
 
         with open(self.input_world, "rb") as f:
             world_data = f.read()
 
+        self.__verify_exploration_world(world_data[0:4])
+        self.world_height = struct.unpack("<I", world_data[48:52])[0]
+
         segment_count = world_file_size // self.SEGMENT_SIZE
 
         # Cycle through the file by 1024-byte segments
+        os.makedirs(self.output_dir, exist_ok=True)
         for i in range(segment_count):
             segment_start = i * self.SEGMENT_SIZE
             segment_end = segment_start + self.SEGMENT_SIZE

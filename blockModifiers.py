@@ -31,5 +31,5 @@ def translate_block_modifier(exploration_modifier: int, block_type: str) -> int:
         return modifier
 
     # Unknown block type
-    print(f"Unknown block modifier: {block_type} with {hex(exploration_modifier)}")
-    return 0
+    # print(f"Unknown block modifier: {block_type} with {hex(exploration_modifier)}")
+    return -1

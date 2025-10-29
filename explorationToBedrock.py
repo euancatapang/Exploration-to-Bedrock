@@ -1,3 +1,4 @@
+import argparse
 import sys
 import shutil
 import zipfile
@@ -53,13 +54,23 @@ def __zip_template_to_mcworld(template_dir: str, input_save_path: str):
     print(f"Template zipped into '{output_mcworld}'")
     return output_mcworld
 
-def main(exploration_world_path: str) -> None:
+def __clear_temp_files():
+    for folder in ["split", "reconstructed_compressed", "decompressed_chunks", "working_template"]:
+        if os.path.exists(folder):
+            shutil.rmtree(folder)
+
+def main(exploration_world_path: str, clear_on_finish: str) -> None:
+    
     if not os.path.exists(exploration_world_path):
         raise FileNotFoundError("File does not exist")
+
+    # Clear files from previous run, if any
+    __clear_temp_files()
 
     # Split world file into 1024-byte segments
     splitter = Splitter(exploration_world_path)
     splitter.split_world_file()
+    world_height = splitter.world_height
 
     print(f"{exploration_world_path} split into {splitter.heads_found} head and {splitter.bodies_found} body segments")
 
@@ -67,31 +78,53 @@ def main(exploration_world_path: str) -> None:
     reconstructor = Reconstructor()
     reconstructor.reconstruct_compressed_chunks()
 
-    print(f"Reconstructed {len(reconstructor.heads_list)} compressed chunks")
+    print(f"Reconstructed {reconstructor.chunks_reconstructed} compressed chunks")
 
-    # Decompress rebuild chunks
-    Decompressor().decompress_chunks()
+    # Decompress rebuilt chunks
+    decompressor = Decompressor(world_height)
+    decompressor.decompress_chunks()
 
-    print("Decompressed chunks")
+    print(f"Decompressed chunks to {decompressor.decompressed_size}-byte files")
 
     __prepare_template_world()
 
     # Convert Exploration chunks to Minecraft Bedrock
-    translator = Translator()
+    translator = Translator(world_height)
     translator.convert_chunks()
 
-    print(f"Converted Exploration {os.path.basename(exploration_world_path)}")
+    print(f"\n{translator.chunk_count} chunks placed")
+    print(f"{translator.block_count} blocks placed")
+    print(f"{translator.unknown_block_count} unknown blocks found")
+    print(f"{translator.unknown_modifier_count} blocks with unknown modifiers found")
+    print(f"Converted Exploration {os.path.basename(exploration_world_path)}\n")
+
     __zip_template_to_mcworld(working_template, exploration_world_path)
 
+    if clear_on_finish:
+        __clear_temp_files()
+        print("Temporary files cleared automatically")
+        exit()
+    
     print("Clear generated files? (y/n)")
     choice = input()
     if choice.lower() == 'y':
-        for folder in ["split", "reconstructed_compressed", "decompressed_chunks", "working_template"]:
-            if os.path.exists(folder):
-                shutil.rmtree(folder)
-
+        __clear_temp_files()
+        
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python explorationToBedrock.py path_to_saveXX.dat")
-        sys.exit(1)
-    main(sys.argv[1])
+    parser = argparse.ArgumentParser(
+        description = "Convert Exploration saveXX.dat worlds into Minecraft Bedrock Edition worlds."
+    )
+    parser.add_argument(
+        "world_path",
+        help = "Path to the Exploration saveXX.dat file"
+    )
+    parser.add_argument(
+        "-c", "--clear",
+        action = "store_true",
+        help = "Automatically clear temporary folders after conversion"
+    )
+
+    args = parser.parse_args()
+
+    # Run main pipeline
+    main(args.world_path, args.clear)

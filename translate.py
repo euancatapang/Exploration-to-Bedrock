@@ -8,22 +8,22 @@ from blockModifiers import translate_block_modifier
 from blockMap import get_equivalent_block
 
 class Translator:
-    
-    BLOCKS_IN_CHUNK = 32768
 
     template_dir = "working_template"
     input_dir = "decompressed_chunks"
-
     chunk_file_pattern = re.compile(r"([+-]\d+)_([+-]\d+)\.bin")
-    slab_blocks = {}
 
     chunk_count = 0
     block_count = 0
     unknown_block_count = 0
+    unknown_modifier_count = 0
 
-    def __init__(self):
+    def __init__(self, world_height):
         if not os.path.isdir(self.template_dir): 
             raise FileNotFoundError("Minecraft world template not found in directory")
+        
+        self.WORLD_HEIGHT = world_height
+        self.BLOCKS_IN_CHUNK = 16 * world_height * 16
 
     # Get top-slab block object from world. Top slab block modifier can only be fetched from world
     def __fetch_slab_blocks(self):
@@ -94,13 +94,17 @@ class Translator:
 
             else:
                 new_modifier = translate_block_modifier(current_block_modifiers[0], block_type)
+                if new_modifier == -1:
+                    self.unknown_modifier_count += 1
+                    new_modifier = 0
+                    
                 return bedrock.Block(f"minecraft:{block_name}", new_modifier)
         else:
             return bedrock.Block(f"minecraft:{new_block}", new_modifier)
 
     def __count_unknown_blocks(self, current_block: bedrock.Block):
         if current_block.name == "minecraft:unknown":
-            self.unknown_block_count += 1
+            self.unknown_block_count += 1                
 
     # Loop through each block in each Exploration chunk file
     def convert_chunks(self):
@@ -115,15 +119,20 @@ class Translator:
                 with open(chunk_path, "rb") as f:
                     current_chunk_data = f.read()
 
-                current_chunk_blocks = current_chunk_data[0:32768]
-                current_chunk_modifiers = current_chunk_data[32768:98304]
+                current_chunk_blocks = current_chunk_data[0:self.BLOCKS_IN_CHUNK]
+                current_chunk_modifiers = current_chunk_data[self.BLOCKS_IN_CHUNK:self.BLOCKS_IN_CHUNK * 3]
 
                 for z_slice in range(16):
-                    for y_layer in range(128):
+                    for y_layer in range(self.WORLD_HEIGHT):
                         for x_block in range(16):
 
-                            block_index = (z_slice * 16 * 128) + (y_layer * 16) + (x_block)
-                            modifier_index = (z_slice * 16 * 128 * 2) + (y_layer * 16 * 2) + (x_block * 2)
+                            block_index = (
+                                (z_slice * 16 * self.WORLD_HEIGHT) + 
+                                (y_layer * 16) + 
+                                (x_block)
+                            )
+
+                            modifier_index = 2 * block_index
 
                             current_block = current_chunk_blocks[block_index]
                             current_block_modifiers = current_chunk_modifiers[modifier_index : modifier_index + 2]

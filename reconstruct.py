@@ -36,7 +36,7 @@ class Reconstructor:
             chunk_data = head_data[24:24 + self.MAX_SEGMENT_SIZE]
 
             while index_of_next != -1:
-                body_path = glob.glob(os.path.join(self.input_dir, f"{index_of_next}_body_*.bin"))[0]
+                body_path = glob.glob(os.path.join(self.input_dir, f"{index_of_next:03d}_body_*.bin"))[0]
 
                 with open(body_path, "rb") as f:
                     body_data = f.read()
@@ -63,3 +63,4 @@ class Reconstructor:
         for head_path in self.heads_list:
             chunk_data, chunk_x, chunk_y, compressed_size = self.__reconstruct_compressed_payload(head_path)
             self.__write_chunk(chunk_data, chunk_x, chunk_y, compressed_size)
+

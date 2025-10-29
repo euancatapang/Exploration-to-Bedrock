@@ -1,7 +1,0 @@
-__pycache__
-
-# Input dir for Exploration saves
-files/
-
-# Name format for converted worlds
-save*_converted*.mcworld
